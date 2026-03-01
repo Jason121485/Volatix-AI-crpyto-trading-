@@ -53,7 +53,11 @@ const TradeCard: React.FC<TradeCardProps> = ({ setup }) => {
               </span>
             </div>
             <h3 className="text-2xl font-bold text-white font-mono">{setup.coin}/{setup.pair}</h3>
-            <div className="text-[10px] text-zinc-500 font-semibold uppercase tracking-widest mt-1">{setup.exchange}</div>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="text-[10px] text-zinc-500 font-semibold uppercase tracking-widest">{setup.exchange}</div>
+              <div className="w-1 h-1 bg-zinc-700 rounded-full" />
+              <div className="text-[10px] text-emerald-500 font-semibold uppercase tracking-widest">{setup.marketRegime}</div>
+            </div>
           </div>
           <div className="text-right">
             <div className="text-zinc-500 text-[10px] uppercase tracking-widest mb-1">Confidence</div>
@@ -86,6 +90,27 @@ const TradeCard: React.FC<TradeCardProps> = ({ setup }) => {
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-2">
+            <div className="p-2 bg-zinc-800/30 rounded-lg border border-zinc-800">
+              <div className="text-zinc-500 text-[10px] uppercase mb-1">Liquidity Score</div>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-1 bg-zinc-800 rounded-full overflow-hidden">
+                  <div className="h-full bg-emerald-500" style={{ width: `${setup.liquidityScore}%` }} />
+                </div>
+                <span className="text-white font-mono text-xs">{setup.liquidityScore}</span>
+              </div>
+            </div>
+            <div className="p-2 bg-zinc-800/30 rounded-lg border border-zinc-800">
+              <div className="text-zinc-500 text-[10px] uppercase mb-1">Sentiment Score</div>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-1 bg-zinc-800 rounded-full overflow-hidden">
+                  <div className="h-full bg-blue-500" style={{ width: `${setup.sentimentScore}%` }} />
+                </div>
+                <span className="text-white font-mono text-xs">{setup.sentimentScore}</span>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-3 gap-2">
             <div className="text-center p-2 bg-zinc-800/30 rounded-lg">
               <div className="text-zinc-500 text-[10px] uppercase">R:R</div>
@@ -98,6 +123,17 @@ const TradeCard: React.FC<TradeCardProps> = ({ setup }) => {
             <div className="text-center p-2 bg-zinc-800/30 rounded-lg">
               <div className="text-zinc-500 text-[10px] uppercase">BTC Align</div>
               <div className="text-white font-semibold text-xs">{setup.btcAlignment}</div>
+            </div>
+          </div>
+
+          <div>
+            <div className="text-zinc-500 text-[10px] uppercase tracking-wider mb-2">Key Signals Detected</div>
+            <div className="flex flex-wrap gap-1">
+              {setup.keySignals.map((signal, idx) => (
+                <span key={idx} className="text-[9px] font-bold uppercase px-2 py-0.5 bg-zinc-800 text-zinc-400 rounded border border-zinc-700">
+                  {signal}
+                </span>
+              ))}
             </div>
           </div>
 
@@ -123,13 +159,8 @@ const TradeCard: React.FC<TradeCardProps> = ({ setup }) => {
           )}
 
           <div className="mt-4 p-3 bg-zinc-800/50 rounded-xl border border-zinc-700/30">
-            <div className="text-zinc-500 text-[10px] uppercase tracking-wider mb-1">Reason (Vol + Mom + Vol)</div>
+            <div className="text-zinc-500 text-[10px] uppercase tracking-wider mb-1">Institutional Reasoning</div>
             <p className="text-zinc-300 text-xs leading-relaxed italic">"{setup.reason}"</p>
-          </div>
-          
-          <div className="p-3 bg-zinc-900 rounded-xl border border-zinc-800">
-            <div className="text-zinc-500 text-[10px] uppercase tracking-wider mb-1">Strategy Detail</div>
-            <p className="text-zinc-400 text-[11px] leading-relaxed">{setup.strategy}</p>
           </div>
         </div>
       </div>
@@ -171,8 +202,8 @@ export default function App() {
               <Activity className="text-black" size={24} />
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight">Volatix AI</h1>
-              <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">Volatility Scanner Pro</p>
+              <h1 className="text-xl font-bold tracking-tight">EliteTrade AI</h1>
+              <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">Institutional Intelligence</p>
             </div>
           </div>
 
@@ -212,13 +243,13 @@ export default function App() {
             animate={{ opacity: 1, y: 0 }}
           >
             <h2 className="text-4xl md:text-5xl font-bold mb-6 tracking-tight">
-              AI-Powered <span className="text-emerald-500">Market Intelligence</span>
+              Institutional <span className="text-emerald-500">Market Intelligence</span>
             </h2>
             <p className="text-zinc-400 text-lg leading-relaxed">
-              Real-time scanning for high-probability setups. 
+              Elite-level trade selection based on liquidity, derivatives data, sentiment, and smart money signals.
               {mode === TradingMode.FUTURES 
-                ? " Conservative 10x max leverage with built-in risk engine." 
-                : " Trend-following strategies for long-term spot accumulation."}
+                ? " Conservative 10x max leverage with institutional risk management." 
+                : " Strategic spot accumulation aligned with global market regimes."}
             </p>
           </motion.div>
         </div>
@@ -328,10 +359,10 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex items-center gap-2">
             <Activity className="text-emerald-500" size={20} />
-            <span className="font-bold text-zinc-400">CryptoPulse AI</span>
+            <span className="font-bold text-zinc-400">EliteTrade AI</span>
           </div>
           <p className="text-zinc-600 text-xs text-center md:text-right">
-            © 2026 CryptoPulse AI. For educational purposes only. Trading involves significant risk.
+            © 2026 EliteTrade AI. Institutional-grade intelligence for professional traders.
           </p>
         </div>
       </footer>

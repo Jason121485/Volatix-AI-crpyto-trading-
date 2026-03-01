@@ -8,7 +8,9 @@ export enum TradeDirection {
   SHORT = 'SHORT',
 }
 
-export type StrategyType = 'Breakout' | 'Pullback' | 'Reversal';
+export type StrategyType = 'Breakout' | 'Pullback' | 'Reversal' | 'Liquidity Sweep' | 'Mean Reversion';
+
+export type MarketRegime = 'Trending' | 'Ranging' | 'High Volatility' | 'Low Liquidity' | 'News Driven';
 
 export interface TradeSetup {
   id: string;
@@ -32,6 +34,10 @@ export interface TradeSetup {
   volatilityLevel: 'Low' | 'Medium' | 'High';
   volumeSurge: string;
   btcAlignment: string;
+  marketRegime: MarketRegime;
+  keySignals: string[];
+  liquidityScore: number; // 1-100
+  sentimentScore: number; // 1-100
   timestamp: number;
 }
 

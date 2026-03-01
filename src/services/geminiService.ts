@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { TradingMode, TradeSetup, TradeDirection } from "../types";
+import { PriceData } from "./priceService";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
@@ -49,9 +50,16 @@ const tradeSetupSchema = {
   ],
 };
 
-export async function generateTradeSetup(mode: TradingMode): Promise<TradeSetup> {
+export async function generateTradeSetup(mode: TradingMode, marketContext: PriceData[]): Promise<TradeSetup> {
+  const marketSummary = marketContext.map(t => `${t.symbol}: $${t.price} (${t.priceChangePercent}%)`).join(', ');
+  
   const prompt = `
-    Act as a professional crypto volatility analyst. Generate a high-probability trade setup for ${mode} trading by scanning major exchanges (Binance, Bybit, OKX, Coinbase, Kraken).
+    Act as a professional crypto volatility analyst. Generate a high-probability trade setup for ${mode} trading.
+    
+    REAL-TIME MARKET CONTEXT (Binance):
+    ${marketSummary}
+    
+    CURRENT TIME: ${new Date().toISOString()}
     
     VOLATILITY SCANNER CRITERIA:
     - Focus on high-liquidity altcoins and top volume gainers.
@@ -74,7 +82,7 @@ export async function generateTradeSetup(mode: TradingMode): Promise<TradeSetup>
     - Only LONG setups.
     `}
     
-    The setup should be realistic based on current market trends (simulated for this request).
+    MANDATORY: Use the REAL-TIME prices provided in the context for entry, stop loss, and targets.
     Provide a detailed "reason" field summarizing Volatility + Momentum + Volume.
     Select a specific strategy type: Breakout, Pullback, or Reversal.
   `;

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { TradingMode, TradeSetup, TradeDirection } from './types';
 import { generateTradeSetup } from './services/geminiService';
+import { getTopTickers } from './services/priceService';
 
 interface TradeCardProps {
   setup: TradeSetup;
@@ -146,11 +147,15 @@ export default function App() {
     setIsScanning(true);
     setError(null);
     try {
-      const newSetup = await generateTradeSetup(mode);
+      const marketData = await getTopTickers();
+      if (marketData.length === 0) {
+        throw new Error("Failed to fetch real-time market data.");
+      }
+      const newSetup = await generateTradeSetup(mode, marketData);
       setSetups(prev => [newSetup, ...prev].slice(0, 10));
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError("Failed to generate trade setup. Please try again.");
+      setError(err.message || "Failed to generate trade setup. Please try again.");
     } finally {
       setIsScanning(false);
     }

@@ -16,18 +16,22 @@ import {
   BarChart3,
   Info,
   ChevronRight,
-  Activity
+  Activity,
+  Globe,
+  Layers
 } from 'lucide-react';
-import { TradingMode, TradeSetup, TradeDirection } from './types';
+import { TradingMode, TradeSetup, TradeDirection, MarketRegime } from './types';
 import { generateTradeSetup } from './services/geminiService';
 import { getTopTickers } from './services/priceService';
 
 interface TradeCardProps {
   setup: TradeSetup;
+  livePrice?: number;
 }
 
-const TradeCard: React.FC<TradeCardProps> = ({ setup }) => {
+const TradeCard: React.FC<TradeCardProps> = ({ setup, livePrice }) => {
   const isLong = setup.direction === TradeDirection.LONG;
+  const priceDistance = livePrice ? ((livePrice - setup.entry) / setup.entry) * 100 : null;
   
   return (
     <motion.div 
@@ -57,11 +61,20 @@ const TradeCard: React.FC<TradeCardProps> = ({ setup }) => {
               <div className="text-[10px] text-zinc-500 font-semibold uppercase tracking-widest">{setup.exchange}</div>
               <div className="w-1 h-1 bg-zinc-700 rounded-full" />
               <div className="text-[10px] text-emerald-500 font-semibold uppercase tracking-widest">{setup.marketRegime}</div>
+              <div className="w-1 h-1 bg-zinc-700 rounded-full" />
+              <div className="text-[10px] text-zinc-400 font-semibold uppercase tracking-widest">Conf: {setup.confidenceScore}%</div>
             </div>
           </div>
           <div className="text-right">
-            <div className="text-zinc-500 text-[10px] uppercase tracking-widest mb-1">Confidence</div>
-            <div className="text-xl font-bold text-white">{setup.confidenceScore}%</div>
+            <div className="text-zinc-500 text-[10px] uppercase tracking-widest mb-1">Live Price</div>
+            <div className={`text-xl font-bold font-mono ${priceDistance && priceDistance > 0 ? 'text-emerald-400' : priceDistance && priceDistance < 0 ? 'text-rose-400' : 'text-white'}`}>
+              {livePrice ? `$${livePrice.toLocaleString()}` : '---'}
+            </div>
+            {priceDistance !== null && (
+              <div className={`text-[10px] font-bold ${priceDistance > 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                {priceDistance > 0 ? '+' : ''}{priceDistance.toFixed(2)}% from entry
+              </div>
+            )}
           </div>
         </div>
 
@@ -168,11 +181,83 @@ const TradeCard: React.FC<TradeCardProps> = ({ setup }) => {
   );
 };
 
+const MarketRegimeIndicator: React.FC<{ regime: MarketRegime | null, isScanning: boolean }> = ({ regime, isScanning }) => {
+  const getRegimeConfig = (r: MarketRegime) => {
+    switch (r) {
+      case 'Trending':
+        return { icon: <TrendingUp size={16} />, color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' };
+      case 'Ranging':
+        return { icon: <RefreshCw size={16} />, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
+      case 'High Volatility':
+        return { icon: <Zap size={16} />, color: 'text-amber-400', bg: 'bg-amber-500/10', border: 'border-amber-500/20' };
+      case 'Low Liquidity':
+        return { icon: <Shield size={16} />, color: 'text-zinc-400', bg: 'bg-zinc-500/10', border: 'border-zinc-500/20' };
+      case 'News Driven':
+        return { icon: <Info size={16} />, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' };
+      default:
+        return { icon: <Globe size={16} />, color: 'text-zinc-400', bg: 'bg-zinc-500/10', border: 'border-zinc-500/20' };
+    }
+  };
+
+  if (isScanning) {
+    return (
+      <div className="flex items-center gap-3 px-4 py-2 bg-zinc-900/50 border border-zinc-800 rounded-full animate-pulse">
+        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-ping" />
+        <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Detecting Regime...</span>
+      </div>
+    );
+  }
+
+  if (!regime) return null;
+
+  const config = getRegimeConfig(regime);
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className={`flex items-center gap-3 px-4 py-2 ${config.bg} ${config.border} border rounded-full shadow-lg shadow-black/20`}
+    >
+      <div className={config.color}>{config.icon}</div>
+      <div className="flex flex-col">
+        <span className="text-[8px] font-bold uppercase tracking-[0.2em] text-zinc-500 leading-none mb-0.5">Market Regime</span>
+        <span className={`text-[11px] font-black uppercase tracking-wider ${config.color} leading-none`}>{regime}</span>
+      </div>
+    </motion.div>
+  );
+};
+
 export default function App() {
   const [mode, setMode] = useState<TradingMode>(TradingMode.SPOT);
   const [setups, setSetups] = useState<TradeSetup[]>([]);
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentRegime, setCurrentRegime] = useState<MarketRegime | null>(null);
+  const [livePrices, setLivePrices] = useState<Record<string, number>>({});
+  const [wsStatus, setWsStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
+
+  useEffect(() => {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}`;
+    const socket = new WebSocket(wsUrl);
+
+    socket.onopen = () => setWsStatus('connected');
+    socket.onclose = () => setWsStatus('disconnected');
+    socket.onerror = () => setWsStatus('disconnected');
+
+    socket.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      if (message.type === 'TICKER_UPDATE') {
+        const priceMap: Record<string, number> = {};
+        message.data.forEach((t: any) => {
+          priceMap[t.s] = parseFloat(t.p);
+        });
+        setLivePrices(prev => ({ ...prev, ...priceMap }));
+      }
+    };
+
+    return () => socket.close();
+  }, []);
 
   const handleScan = async () => {
     setIsScanning(true);
@@ -184,6 +269,7 @@ export default function App() {
       }
       const newSetup = await generateTradeSetup(mode, marketData);
       setSetups(prev => [newSetup, ...prev].slice(0, 10));
+      setCurrentRegime(newSetup.marketRegime);
     } catch (err: any) {
       console.error(err);
       setError(err.message || "Failed to generate trade setup. Please try again.");
@@ -208,6 +294,11 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-zinc-800 rounded-full">
+              <div className={`w-1.5 h-1.5 rounded-full ${wsStatus === 'connected' ? 'bg-emerald-500 animate-pulse' : wsStatus === 'connecting' ? 'bg-amber-500' : 'bg-rose-500'}`} />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Live Feed</span>
+            </div>
+            <MarketRegimeIndicator regime={currentRegime} isScanning={isScanning} />
             <div className="bg-zinc-900 p-1 rounded-xl border border-zinc-800 flex gap-1">
               <button 
                 onClick={() => setMode(TradingMode.SPOT)}
@@ -288,7 +379,11 @@ export default function App() {
           <AnimatePresence mode="popLayout">
             {setups.length > 0 ? (
               setups.map((setup) => (
-                <TradeCard key={setup.id} setup={setup} />
+                <TradeCard 
+                  key={setup.id} 
+                  setup={setup} 
+                  livePrice={livePrices[`${setup.coin}${setup.pair}`]} 
+                />
               ))
             ) : (
               !isScanning && (
